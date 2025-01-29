@@ -2,6 +2,7 @@ from inserver import Application
 
 app = Application(path="0.0.0.0")
 
+
 @app.get("^/data$")
 def get_data(request, response):
     data = {

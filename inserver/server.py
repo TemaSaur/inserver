@@ -1,3 +1,4 @@
+from __future__ import annotations
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Callable
 import re
@@ -16,7 +17,7 @@ class Response:
 
     def __init__(self) -> None:
         self.headers = {}
-        self.body = bytes
+        self.body = bytes()
 
     def json(
         self,
@@ -31,7 +32,7 @@ class Response:
 
         if headers is not None:
             self.headers |= headers
-        
+
         if isinstance(body, dict):
             body = json.dumps(body)
 
@@ -40,12 +41,13 @@ class Response:
 
         self.body = body
 
+
 class Application:
     handlers: dict[str, Callable]
     address: tuple[str, int]
 
     class Handler(BaseHTTPRequestHandler):
-        app: object
+        app: Application
 
         def do(self):
             pass
