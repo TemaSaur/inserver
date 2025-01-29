@@ -25,4 +25,9 @@ def index(request, response):
     response.json(200, {"hello": "world"})
 
 
+@app.post("^/$")
+def post(request, response):
+    response.json(201, "\"created\"")
+
+
 app.start()

@@ -43,14 +43,23 @@ class Response:
 
 
 class Application:
-    handlers: dict[str, Callable]
+    handlers: dict[str, dict[str, Callable]]
     address: tuple[str, int]
 
     class Handler(BaseHTTPRequestHandler):
         app: Application
 
-        def do(self):
-            pass
+        def do(self, method: str):
+            for p, h in self.app.handlers[method].items():
+                if re.match(p, self.path):
+                    self.serve(h)
+                    return
+
+            self.send_response(404)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+
+            self.wfile.write(b'"not found"')
 
         def serve(self, handler):
             request = Request(self.request)
@@ -66,27 +75,27 @@ class Application:
             self.wfile.write(response.body)
 
         def do_GET(self):
+            self.do('get')
 
-            for p, h in self.app.handlers.items():
-                if re.match(p, self.path):
-                    self.serve(h)
-                    return
+        def do_POST(self):
+            self.do('post')
 
-            self.send_response(404)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
+    def method_decorator(self, method: str):
+        def method_handler(path: str):
+            def decorator(handler):
+                def wrapper(
+                    request: Request,
+                    response: Response,
+                    *args,
+                    **kwargs
+                ):
+                    handler(request, response, *args, **kwargs)
+                    return response
 
-            self.wfile.write(b"not found")
-
-    def get(self, path: str):
-        def decorator(handler):
-            def wrapper(request: Request, response: Response, *args, **kwargs):
-                handler(request, response, *args, **kwargs)
-                return response
-
-            self.handlers[path] = wrapper
-            return wrapper
-        return decorator
+                self.handlers[method][path] = wrapper
+                return wrapper
+            return decorator
+        return method_handler
 
     def __init__(
         self,
@@ -94,14 +103,16 @@ class Application:
         path: str = 'localhost'
     ) -> None:
         self.address = (path, port)
-        self.handlers = {}
+        self.handlers = {'get': {}, 'post': {}}
+        self.get = self.method_decorator('get')
+        self.post = self.method_decorator('post')
 
     def start(self):
         self.Handler.app = self
         server = HTTPServer(self.address, self.Handler)
 
         try:
-            print("server started")
+            print("i'm alive")
             server.serve_forever()
         except KeyboardInterrupt:
             print("i'm dying")
